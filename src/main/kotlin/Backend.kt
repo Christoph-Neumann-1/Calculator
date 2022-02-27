@@ -6,6 +6,7 @@ class ParserException(why: String) : Exception(why)
 //TODO handle errors gracefully
 //TODO modulo
 //TODO: compile expressions for extra efficiency
+//TODO: switch to big decimal
 
 /**
  * This class is used to hold the state necessary for evaluation of expressions.
@@ -19,6 +20,7 @@ class State(val commandCallbacks: HashMap<String, (String) -> Unit>) : Cloneable
         @Suppress("UNCHECKED_CAST")
         this.functions = functions.clone() as HashMap<String, (Array<Double>, State) -> Double>
     }
+
     @Suppress("UNCHECKED_CAST")
     fun cloneVars() = (super.clone() as State).apply { this.vars = vars.clone() as HashMap<String, Variable> }
 
@@ -225,6 +227,10 @@ fun parseExpr(expr: String, pos: IntHolder): Node = run {
             '-' -> {
                 ++pos.i
                 result = BinaryOperator(result, parseTerm(expr, pos)) { a, b -> a - b }
+            }
+            ';' -> {
+                ++pos.i
+                break
             }
             else -> break
         }

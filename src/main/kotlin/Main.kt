@@ -1,8 +1,7 @@
 import java.awt.Color
-import kotlin.math.absoluteValue
 import kotlin.system.exitProcess
 
-fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
+fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: State) {
     commands["exit"] = { exitProcess(0) }
     commands["quit"] = { exitProcess(0) }
     commands["draw"] = {
@@ -61,10 +60,10 @@ fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
             canvas.repaint()
         }
     }
-    commands["vline"]={
-        val x=((it.toDouble()-f.functions.xmin)*f.functions.width/(f.functions.xmax-f.functions.xmin)).toInt()
+    commands["vline"] = {
+        val x = ((it.toDouble() - f.functions.xmin) * f.functions.width / (f.functions.xmax - f.functions.xmin)).toInt()
         with(f) {
-            functions.pixels.graphics.also { it.color= Color.BLACK }.drawLine(x,0,x, functions.height-1)
+            functions.pixels.graphics.also { it.color = Color.BLACK }.drawLine(x, 0, x, functions.height - 1)
             canvas.repaint()
         }
     }
@@ -72,21 +71,64 @@ fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
         with(f.functions)
         {
             val state = s.cloneVars()
-            val expr = parseExpr(it.trim(), IntHolder(0))
-            var prev = expr.evaluate(s.also { it.changeConstant("x", xmin) })
-            for (i in 1..width) {
-                val current = expr.evaluate(s.also { it.changeConstant("x", scaleX(i)) })
-                if (current * prev <= 0) {
-                    val x = scaleX(if (prev.absoluteValue < current.absoluteValue) i - 1 else i)
-                    f.previous.text += "${x}\n"
-                    s.saveResult(x)
-                    return@with
+            val pos = IntHolder(0)
+            val str = it.trim()
+            val expr = parseExpr(str, pos)
+            val lowerBound = parseExpr(str, pos).evaluate(s)
+            val upperBound = parseExpr(str, pos).evaluate(s)
+
+            fun evalAt(x: Double) = expr.evaluate(state.also { state.setVar("x", x) })
+
+            fun containsSolution(a: Double, b: Double): Boolean = evalAt(a) * evalAt(b) <= 0
+
+            //TODO make recursive and find ALL solutions in interval
+            fun findStartingInterval(): Pair<Double, Double>? {
+                var nIntervals = 1
+                while (true) {
+                    if (nIntervals >= 4096)
+                        return null
+                    val step = (upperBound - lowerBound) / nIntervals
+                    for (i in 0 until nIntervals) {
+                        val lower = lowerBound + i * step
+                        val upper = lower + step
+                        if (containsSolution(lower, upper))
+                            return Pair(lower, upper)
+                    }
+                    nIntervals *= 2
                 }
-                prev = current
             }
 
-            f.previous.text += "${Double.NaN}\n"
-            s.saveResult(Double.NaN)
+            fun findBetterSolution(interval: Pair<Double, Double>, n: Int = 0): Double {
+                val (a, b) = interval
+                //This can definitely be done more efficiently
+                if (evalAt(a) == 0.0)
+                    return a
+                if (evalAt(b) == 0.0)
+                    return b
+                return if (n > 100000 || b - a < 0.0001)
+                   ( a + b )/ 2
+                else
+                    if (containsSolution(a, (a +b) / 2))
+                        findBetterSolution(Pair(a, (a+b) / 2))
+                    else
+                        findBetterSolution(Pair((a+b)/2, b))
+            }
+
+            f.previous.text += "Found solution ${findStartingInterval()?.let { findBetterSolution(it) } ?: "None"}\n"
+//            var prev = expr.evaluate(s.also { it.changeConstant("x", xmin) })
+//            for (i in 1..width) {
+//                val current = expr.evaluate(s.also { it.changeConstant("x", scaleX(i)) })
+//                if (current * prev <= 0) {
+//                    val x = scaleX(if (prev.absoluteValue < current.absoluteValue) i - 1 else i)
+//                    f.previous.text += "${x}\n"
+//                    s.saveResult(x)
+//                    return@with
+//                }
+//                prev = current
+//            }
+//
+//            f.previous.text += "${Double.NaN}\n"
+//            s.saveResult(Double.NaN)
         }
     }
     commands["help"] = {
@@ -129,6 +171,8 @@ fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
                 \ymax
                 \ymin
                 
+                \solve finds a solution to an equation in the form f(x)=0
+                
                 Access previous results:
                 ans for last result
                 ans1-9 for anything before that
@@ -138,10 +182,10 @@ fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
 }
 
 fun main() {
-    val f = Frontend(600,600)
+    val f = Frontend(600, 600)
     val commands = HashMap<String, (String) -> Unit>()
     val s = State(commands)
-    bindCommands(f,commands,s)
+    bindCommands(f, commands, s)
     f.input.addActionListener {
         f.previous.text += "${f.input.text}\n"
         evaluate(f.input.text, s).apply {

@@ -5,8 +5,8 @@ import java.awt.image.BufferedImage
 import javax.swing.*
 
 
-//TODO: scaling
-//TODO: allow removing one function from draw
+//TODO: resizing
+//TODO: figure out why the window is not at the correct size sometimes
 class Frontend(width: Int, height: Int) {
     val window = JFrame("Calculator")
     val functions = FunctionDrawer(width, height)
