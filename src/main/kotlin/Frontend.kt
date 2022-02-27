@@ -2,12 +2,7 @@ import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.image.BufferedImage
-import javax.swing.BoxLayout
-import javax.swing.JFrame
-import javax.swing.JPanel
-import javax.swing.JScrollPane
-import javax.swing.JTextArea
-import javax.swing.JTextField
+import javax.swing.*
 
 
 //TODO: scaling
@@ -109,6 +104,7 @@ class Frontend(width: Int, height: Int) {
             redraw()
         }
 
+        //TODO: variable thickness
         //Draws function to internal array, you still need to call paint on whatever surface you want the result on
         fun draw(f: (Double) -> Double) {
             for (x in -1..width) {

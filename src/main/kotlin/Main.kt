@@ -1,4 +1,5 @@
 import java.awt.Color
+import kotlin.math.absoluteValue
 import kotlin.system.exitProcess
 
 fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
@@ -68,19 +69,25 @@ fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
         }
     }
     commands["solve"] = {
-        var guess = 0.00001//To avoid issues with a k of 0
-        val state = s.cloneVars()
-        val dx=0.0001
-        val expr=parseExpr(it.trim(), IntHolder(0))
+        with(f.functions)
+        {
+            val state = s.cloneVars()
+            val expr = parseExpr(it.trim(), IntHolder(0))
+            var prev = expr.evaluate(s.also { it.changeConstant("x", xmin) })
+            for (i in 1..width) {
+                val current = expr.evaluate(s.also { it.changeConstant("x", scaleX(i)) })
+                if (current * prev <= 0) {
+                    val x = scaleX(if (prev.absoluteValue < current.absoluteValue) i - 1 else i)
+                    f.previous.text += "${x}\n"
+                    s.saveResult(x)
+                    return@with
+                }
+                prev = current
+            }
 
-        for(i in 0..1000000) {
-            val fx= expr.evaluate(state.also { state.setVar("x", guess) })
-            val fx2= expr.evaluate(state.also { state.setVar("x", guess+dx) })
-            val k=(fx2-fx)/dx
-            guess=-fx/k
+            f.previous.text += "${Double.NaN}\n"
+            s.saveResult(Double.NaN)
         }
-        f.previous.text+="$guess\n"
-        state.saveResult(guess)
     }
     commands["help"] = {
         f.previous.text +=
