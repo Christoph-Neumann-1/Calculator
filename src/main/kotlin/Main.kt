@@ -1,3 +1,4 @@
+import java.awt.Color
 import kotlin.system.exitProcess
 
 fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
@@ -49,12 +50,22 @@ fun bindCommands(f:Frontend,commands:HashMap<String, (String) -> Unit>,s:State){
         f.canvas.repaint()
     }
     commands["axis"] = {
-        f.functions.axis = !f.functions.axis
-        if (f.functions.axis)
-            f.functions.drawAxis()
-        else
-            f.functions.redraw()
-        f.canvas.repaint()
+        with(f)
+        {
+            functions.axis = !functions.axis
+            if (functions.axis)
+                functions.drawAxis()
+            else
+                functions.redraw()
+            canvas.repaint()
+        }
+    }
+    commands["vline"]={
+        val x=((it.toDouble()-f.functions.xmin)*f.functions.width/(f.functions.xmax-f.functions.xmin)).toInt()
+        with(f) {
+            functions.pixels.graphics.also { it.color= Color.BLACK }.drawLine(x,0,x, functions.height-1)
+            canvas.repaint()
+        }
     }
     commands["solve"] = {
         var guess = 0.00001//To avoid issues with a k of 0

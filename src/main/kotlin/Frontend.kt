@@ -22,11 +22,9 @@ class Frontend(width: Int, height: Int) {
 
     class Canvas(val functions: FunctionDrawer) : JPanel() {
         init {
-            with(Dimension(width, height))
-            {
-                minimumSize = this
-                preferredSize=this
-            }
+            val dim=Dimension(width,height)
+                minimumSize = dim
+                preferredSize = dim
         }
 
         override fun paint(g: Graphics?) {
@@ -36,27 +34,30 @@ class Frontend(width: Int, height: Int) {
     }
 
     init {
-        window.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
-        window.layout = layout
-        window.add(
-            JScrollPane(
-                previous,
-                JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
-            ).also {
-                it.preferredSize =
-                    Dimension(width, 160)
-                it.maximumSize=
-                    Dimension(Int.MAX_VALUE,300)
-            })
-        window.add(input)
-        window.add(canvas)
-        window.isVisible = true
-        window.size= Dimension(width,height+160+24)
-        window.isResizable=false
+        with(window)
+        {
+            defaultCloseOperation = JFrame.EXIT_ON_CLOSE
+            layout = this@Frontend.layout
+            add(
+                JScrollPane(
+                    previous,
+                    JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
+                    JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
+                ).also {
+                    it.preferredSize =
+                        Dimension(width, 160)
+                    it.maximumSize =
+                        Dimension(Int.MAX_VALUE, 300)
+                })
+            add(input)
+            add(canvas)
+            isVisible = true
+            size = Dimension(width, height + 160 + 24)
+            isResizable = false
+        }
     }
 
-    class FunctionDrawer(private val width: Int, private val height: Int) {
+    class FunctionDrawer(val width: Int, val height: Int) {
         //bool should also work as return type
         var toDraw = HashMap<String, (Double) -> Double>()
         val cells = Array<Double>((width + 2)) { 0.0 }
@@ -115,11 +116,10 @@ class Frontend(width: Int, height: Int) {
             }
             for (x in 0 until width)
                 for (y in 0 until height) {
-                    val fx = cells[x + 1]
-                    val sy = scaleY(y)
+                    val fx = cells[x + 1]- scaleY(y)
                     loop@ for (x1 in -1 until 1)
                         for (y1 in -1 until 1)
-                            if (fx > sy != cells[x - x1 + 1] > scaleY(y - y1)||fx==sy) {
+                            if (fx * (cells[x - x1 + 1] - scaleY(y - y1)) < 0 || fx==0.0) {
                                 pixels.setRGB(x, height - y - 1, Color.BLACK.rgb)
                                 break@loop
                             }
