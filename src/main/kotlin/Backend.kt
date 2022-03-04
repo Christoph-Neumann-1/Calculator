@@ -95,6 +95,21 @@ class State(val commandCallbacks: HashMap<String, (String) -> Unit>) : Cloneable
         functions["atan"] = createWrappedFunction(1, 1) { args, _ -> atan(args[0]) }
         functions["sqrt"] = createWrappedFunction(1, 1) { args, _ -> sqrt(args[0]) }
         functions["root"] = createWrappedFunction(2, 2) { args, _ -> args[0].pow(1.0 / args[1]) }
+        functions["abs"] = createWrappedFunction(1, 1) { args, _ -> args[0].absoluteValue }
+        functions["min"] = createWrappedFunction(1, -1) { args, _ ->
+            var v = args[0]
+            for (i in 1 until args.size)
+                if (args[i] < v)
+                    v = args[i]
+            v
+        }
+        functions["max"] = createWrappedFunction(1, -1) { args, _ ->
+            var v = args[0]
+            for (i in 1 until args.size)
+                if (args[i] > v)
+                    v = args[i]
+            v
+        }
     }
 }
 

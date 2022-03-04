@@ -174,6 +174,9 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
                 atan
                 sqrt
                 root(value,order)
+                abs
+                min
+                max
                 
                 Commands:
                 \help
