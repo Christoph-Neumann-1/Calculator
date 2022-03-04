@@ -15,6 +15,25 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
         }
         f.canvas.repaint()
     }
+    //I have not even the slightest clue if this is the correct term
+    commands["drawRelation"] = {
+        val trimmed = it.trim()
+        if (trimmed in s.functions) {
+            val func = s.functions[trimmed]!!
+            f.functions.addToDraw(trimmed) { x, y -> func(arrayOf(x, y), s) }
+        } else {
+            val state = s.cloneVars()
+            f.functions.draw { x, y ->
+                parseExpr(trimmed, IntHolder(0)).evaluate(state.also {
+                    state.setVar(
+                        "x",
+                        x
+                    );state.setVar("y", y)
+                })
+            }
+        }
+        f.canvas.repaint()
+    }
     commands["redraw"] = {
         f.functions.redraw()
         f.canvas.repaint()
@@ -106,12 +125,12 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
                 if (evalAt(b) == 0.0)
                     return b
                 return if (n > 100000 || b - a < 0.0001)
-                   ( a + b )/ 2
+                    (a + b) / 2
                 else
-                    if (containsSolution(a, (a +b) / 2))
-                        findBetterSolution(Pair(a, (a+b) / 2))
+                    if (containsSolution(a, (a + b) / 2))
+                        findBetterSolution(Pair(a, (a + b) / 2))
                     else
-                        findBetterSolution(Pair((a+b)/2, b))
+                        findBetterSolution(Pair((a + b) / 2, b))
             }
 
             f.previous.text += "Found solution ${findStartingInterval()?.let { findBetterSolution(it) } ?: "None"}\n"
@@ -161,6 +180,7 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
                 \exit
                 \quit
                 \draw draws either a function accepting one argument or an expression where x is the current x position. Only functions will stay after a redraw
+                \drawRelation draws a function of both x and y like circles e.g x^2+y^2-1
                 \clear clears the drawing area
                 \axis toggle the axis. This redraws everything
                 \redraw redraws all functions

@@ -17,9 +17,9 @@ class Frontend(width: Int, height: Int) {
 
     class Canvas(val functions: FunctionDrawer) : JPanel() {
         init {
-            val dim=Dimension(width,height)
-                minimumSize = dim
-                preferredSize = dim
+            val dim = Dimension(width, height)
+            minimumSize = dim
+            preferredSize = dim
         }
 
         override fun paint(g: Graphics?) {
@@ -55,7 +55,8 @@ class Frontend(width: Int, height: Int) {
     class FunctionDrawer(val width: Int, val height: Int) {
         //bool should also work as return type
         var toDraw = HashMap<String, (Double) -> Double>()
-        val cells = Array<Double>((width + 2)) { 0.0 }
+        var relationsToDraw = HashMap<String, (Double, Double) -> Double>()
+        private val cells = Array<Double>((width + 2) * (height + 2)) { 0.0 }
         var pixels = BufferedImage(width, height, BufferedImage.TYPE_USHORT_555_RGB)
         var xmin = -10.0
         var xmax = 10.0
@@ -69,6 +70,8 @@ class Frontend(width: Int, height: Int) {
         fun redraw() {
             clear()
             for (f in toDraw)
+                draw(f.value)
+            for (f in relationsToDraw)
                 draw(f.value)
             if (axis)
                 drawAxis()
@@ -99,12 +102,23 @@ class Frontend(width: Int, height: Int) {
             draw(f)
         }
 
+        fun addToDraw(name: String, f: (Double, Double) -> Double) {
+            if (name in toDraw) {
+                relationsToDraw[name] = f
+                redraw()
+                return
+            }
+            relationsToDraw[name] = f
+            draw(f)
+        }
+
         fun removeFromDraw(name: String) {
-            toDraw.remove(name) ?: throw ParserException("Tried removing undefined function")
+            toDraw.remove(name) ?: relationsToDraw.remove(name) ?: ParserException("Tried removing undefined function")
             redraw()
         }
 
         //TODO: variable thickness
+        //This needs to be done properly sooner rather than later
         //Draws function to internal array, you still need to call paint on whatever surface you want the result on
         fun draw(f: (Double) -> Double) {
             for (x in -1..width) {
@@ -112,14 +126,39 @@ class Frontend(width: Int, height: Int) {
             }
             for (x in 0 until width)
                 for (y in 0 until height) {
-                    val fx = cells[x + 1]- scaleY(y)
-                    loop@ for (x1 in -1 until 1)
-                        for (y1 in -1 until 1)
-                            if (fx * (cells[x - x1 + 1] - scaleY(y - y1)) < 0 || fx==0.0) {
+                    val fx = cells[x + 1] - scaleY(y)
+                    loop@ for (x1 in -1 .. 1)
+                        for (y1 in -1 .. 1)
+                            if (fx * (cells[x - x1 + 1] - scaleY(y - y1)) < 0 || fx == 0.0) {
                                 pixels.setRGB(x, height - y - 1, Color.BLACK.rgb)
                                 break@loop
                             }
 
+                }
+        }
+//TODO: turn into just one function
+        fun draw(f: (Double, Double) -> Double) {
+            fun get(x: Int, y: Int) = cells[(x + 1) * (width+2) + y + 1]
+            fun set(x: Int, y: Int, v: Double) {
+                cells[(x + 1) * (width+2) + y + 1] = v
+            }
+
+            for (x in -1..width)
+                for (y in -1..height)
+                    set(x, y, f(scaleX(x), scaleY(y)))
+
+            for(x in 0 until width)
+                for(y in 0 until height) {
+                    val fx=get(x,y)
+                    loop@ for (x1 in -1 .. 1)
+                        for (y1 in -1 ..1)
+                            if(fx*get(x-x1,y-y1)<0||fx==0.0)
+                            {
+                                val received=get(x-x1,y-y1)
+                                val actual=f(scaleX(x-x1),scaleY(y-y1))
+                                pixels.setRGB(x,height-y-1,Color.BLACK.rgb)
+                                break@loop
+                            }
                 }
         }
 
