@@ -1,4 +1,5 @@
 import java.awt.Color
+import kotlin.math.roundToInt
 import kotlin.system.exitProcess
 
 fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: State) {
@@ -134,21 +135,12 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
             }
 
             f.previous.text += "Found solution ${findStartingInterval()?.let { findBetterSolution(it) } ?: "None"}\n"
-//            var prev = expr.evaluate(s.also { it.changeConstant("x", xmin) })
-//            for (i in 1..width) {
-//                val current = expr.evaluate(s.also { it.changeConstant("x", scaleX(i)) })
-//                if (current * prev <= 0) {
-//                    val x = scaleX(if (prev.absoluteValue < current.absoluteValue) i - 1 else i)
-//                    f.previous.text += "${x}\n"
-//                    s.saveResult(x)
-//                    return@with
-//                }
-//                prev = current
-//            }
-//
-//            f.previous.text += "${Double.NaN}\n"
-//            s.saveResult(Double.NaN)
         }
+    }
+    commands["thickness"] = {
+        f.functions.thickness = parseExpr(it, IntHolder(0)).evaluate(s).roundToInt()
+        f.functions.redraw()
+        f.canvas.repaint()
     }
     commands["help"] = {
         f.previous.text +=
@@ -193,6 +185,7 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
                 \xmin
                 \ymax
                 \ymin
+                \thickness how many pixels from the center to color default=0
                 
                 \solve finds a solution to an equation in the form f(x)=0
                 
@@ -205,7 +198,8 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
 }
 
 fun main() {
-    val f = Frontend(600, 600)
+    //TODO: make axes appear in right place for an even number of pixels
+    val f = Frontend(601, 601)
     val commands = HashMap<String, (String) -> Unit>()
     val s = State(commands)
     bindCommands(f, commands, s)
@@ -219,10 +213,4 @@ fun main() {
         f.input.text = ""
     }
     f.canvas.repaint()
-//    while(true) {
-//        val input = readLine()!!
-//        if(input=="\\exit")
-//            return
-//        evaluate(input, s)?.apply { println("$this") }?:println("No value")
-//    }
 }

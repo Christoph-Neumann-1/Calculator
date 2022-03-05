@@ -85,6 +85,7 @@ class State(val commandCallbacks: HashMap<String, (String) -> Unit>) : Cloneable
         for (i in 0..9) {
             vars["ans${if (i != 0) i else ""}"] = Variable(0.0, false)
         }
+        //TODO: use hashmapOf
         vars["pi"] = Variable(PI, false)
         vars["e"] = Variable(E, false)
         functions["sin"] = createWrappedFunction(1, 1) { args, _ -> sin(args[0]) }

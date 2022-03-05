@@ -56,16 +56,17 @@ class Frontend(width: Int, height: Int) {
         //bool should also work as return type
         var toDraw = HashMap<String, (Double) -> Double>()
         var relationsToDraw = HashMap<String, (Double, Double) -> Double>()
-        private val cells = Array<Double>((width + 2) * (height + 2)) { 0.0 }
+        private val corners = Array<Double>((width + 1) * (height + 1)) { 0.0 }
         var pixels = BufferedImage(width, height, BufferedImage.TYPE_USHORT_555_RGB)
         var xmin = -10.0
         var xmax = 10.0
         var ymin = -10.0
         var ymax = 10.0
         var axis = true
+        var thickness = 0//additional pixels to color in each direction
 
-        fun scaleX(x: Int) = xmin + (xmax - xmin) / width * x
-        fun scaleY(y: Int) = ymin + (ymax - ymin) / height * y
+        fun scaleX(x: Double) = xmin + (xmax - xmin) / width * x
+        fun scaleY(y: Double) = ymin + (ymax - ymin) / height * y
 
         fun redraw() {
             clear()
@@ -117,49 +118,33 @@ class Frontend(width: Int, height: Int) {
             redraw()
         }
 
-        //TODO: variable thickness
-        //This needs to be done properly sooner rather than later
-        //Draws function to internal array, you still need to call paint on whatever surface you want the result on
-        fun draw(f: (Double) -> Double) {
-            for (x in -1..width) {
-                cells[x + 1] = f(scaleX(x))
-            }
+        fun get(x: Int, y: Int) = corners[x * (width + 1) + y]
+
+        private fun draw() {
+            val g = pixels.createGraphics()
+            g.color = Color.BLACK
             for (x in 0 until width)
-                for (y in 0 until height) {
-                    val fx = cells[x + 1] - scaleY(y)
-                    loop@ for (x1 in -1 .. 1)
-                        for (y1 in -1 .. 1)
-                            if (fx * (cells[x - x1 + 1] - scaleY(y - y1)) < 0 || fx == 0.0) {
-                                pixels.setRGB(x, height - y - 1, Color.BLACK.rgb)
-                                break@loop
-                            }
-
-                }
+                for (y in 0 until height)
+                    if (get(x, y) * get(x + 1, y + 1) + get(x, y + 1) * get(x + 1, y) <= 0)
+                        g.fillRect(x-thickness, height - y-thickness - 1, 2*thickness+1, 2*thickness+1)
         }
-//TODO: turn into just one function
-        fun draw(f: (Double, Double) -> Double) {
-            fun get(x: Int, y: Int) = cells[(x + 1) * (width+2) + y + 1]
-            fun set(x: Int, y: Int, v: Double) {
-                cells[(x + 1) * (width+2) + y + 1] = v
+
+        fun draw(f: (Double) -> Double) {
+            for (x in 0..width) {
+                val fx = f(scaleX(x - .5))
+                corners[x * (width + 1)] = fx
+                for (y in 0..height)
+                    corners[x * (width + 1) + y] = fx - scaleY(y - .5)
             }
+            draw()
+        }
 
-            for (x in -1..width)
-                for (y in -1..height)
-                    set(x, y, f(scaleX(x), scaleY(y)))
-
-            for(x in 0 until width)
-                for(y in 0 until height) {
-                    val fx=get(x,y)
-                    loop@ for (x1 in -1 .. 1)
-                        for (y1 in -1 ..1)
-                            if(fx*get(x-x1,y-y1)<0||fx==0.0)
-                            {
-                                val received=get(x-x1,y-y1)
-                                val actual=f(scaleX(x-x1),scaleY(y-y1))
-                                pixels.setRGB(x,height-y-1,Color.BLACK.rgb)
-                                break@loop
-                            }
-                }
+        //TODO: turn into just one function
+        fun draw(f: (Double, Double) -> Double) {
+            for (x in 0..width)
+                for (y in 0..height)
+                    corners[x * (width + 1) + y] = f(scaleX(x - .5), scaleY(y - .5))
+            draw()
         }
 
         fun clear() {
