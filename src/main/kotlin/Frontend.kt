@@ -7,24 +7,19 @@ import javax.swing.*
 
 //TODO: resizing
 //TODO: figure out why the window is not at the correct size sometimes
-class Frontend(width: Int, height: Int) {
+class Frontend {
     val window = JFrame("Calculator")
-    val functions = FunctionDrawer(width, height)
-    val canvas = Canvas(functions)
+    val functions = FunctionDrawer()
+    val canvas = Canvas(functions).also { it.preferredSize = Dimension(200, 200) }
     val layout = BoxLayout(window.contentPane, BoxLayout.Y_AXIS)
-    val input = JTextField().also { it.maximumSize = Dimension(Int.MAX_VALUE, 30) }
+    val input =
+        JTextField().also { it.maximumSize = Dimension(Int.MAX_VALUE, 30);it.preferredSize = Dimension(200, 30) }
     val previous = JTextArea().also { it.isEditable = false }
 
     class Canvas(val functions: FunctionDrawer) : JPanel() {
-        init {
-            val dim = Dimension(width, height)
-            minimumSize = dim
-            preferredSize = dim
-        }
-
         override fun paint(g: Graphics?) {
             g ?: return
-            functions.redraw()
+            functions.redraw(width, height)
             g.drawImage(functions.pixels, 0, 0, null)
         }
     }
@@ -41,25 +36,25 @@ class Frontend(width: Int, height: Int) {
                     JScrollPane.HORIZONTAL_SCROLLBAR_NEVER
                 ).also {
                     it.preferredSize =
-                        Dimension(width, 160)
-                    it.maximumSize =
-                        Dimension(Int.MAX_VALUE, 300)
+                        Dimension(200, 160)
+                    it.maximumSize = Dimension(Int.MAX_VALUE, 160)
                 })
             add(input)
             add(canvas)
             isVisible = true
-            size = Dimension(width, height + 160 + 24)
-            isResizable = false
+            pack()
         }
     }
 
-    class FunctionDrawer(val width: Int, val height: Int) {
+    class FunctionDrawer() {
         //bool should also work as return type
         var toDraw = HashMap<String, (Double, Double) -> Double>()
+        var width = 1
+        var height = 1
 
         //This is kept as generic as possible to allow other commands like vline to be used from here
         var anonymousFunctions = ArrayDeque<() -> Unit>()
-        private val corners = Array<Double>((width + 1) * (height + 1)) { 0.0 }
+        private var corners = Array((width + 1) * (height + 1)) { 0.0 }
         var pixels = BufferedImage(width, height, BufferedImage.TYPE_USHORT_555_RGB)
         var xmin = -10.0
         var xmax = 10.0
@@ -71,7 +66,13 @@ class Frontend(width: Int, height: Int) {
         fun scaleX(x: Double) = xmin + (xmax - xmin) / width * x
         fun scaleY(y: Double) = ymin + (ymax - ymin) / height * y
 
-        fun redraw() {
+        fun redraw(width: Int, height: Int) {
+            if (width != this.width || height != this.height) {
+                this.width = width
+                this.height = height
+                pixels = BufferedImage(width, height, BufferedImage.TYPE_USHORT_555_RGB)
+                corners = Array((width + 1) * (height + 1)) { 0.0 }
+            }
             pixels.createGraphics().fillRect(0, 0, width, height)
             for (f in toDraw)
                 draw(f.value)
@@ -90,24 +91,16 @@ class Frontend(width: Int, height: Int) {
              */
             val g = pixels.createGraphics()
             g.color = Color.BLACK
-            if (x in 0 until height)
+            if (x in 0 until width)
                 g.drawLine(x, 0, x, height - 1)
             if (y in 0 until height)
                 g.drawLine(0, y, width - 1, y)
         }
 
         fun addToDraw(name: String = "", f: (Double, Double) -> Double) {
-            if (name.isEmpty()) {
+            if (name.isEmpty())
                 anonymousFunctions += { draw(f) }
-                draw(f)
-                return
-            }
-            if (name in toDraw) {
-                toDraw[name] = f
-                return
-            }
             toDraw[name] = f
-            draw(f)
         }
 
         fun removeFromDraw(name: String) {
@@ -117,10 +110,10 @@ class Frontend(width: Int, height: Int) {
 
 
         fun draw(f: (Double, Double) -> Double) {
-            fun get(x: Int, y: Int) = corners[x * (width + 1) + y]
+            fun get(x: Int, y: Int) = corners[x * (height + 1) + y]
             for (x in 0..width)
                 for (y in 0..height)
-                    corners[x * (width + 1) + y] = f(scaleX(x - .5), scaleY(y - .5))
+                    corners[x * (height + 1) + y] = f(scaleX(x - .5), scaleY(y - .5))
             val g = pixels.createGraphics()
             g.color = Color.BLACK
             for (x in 0 until width)

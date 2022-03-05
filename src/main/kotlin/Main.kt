@@ -73,13 +73,14 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
         f.canvas.repaint()
     }
     commands["vline"] = {
-        val x = ((it.toDouble() - f.functions.xmin) * f.functions.width / (f.functions.xmax - f.functions.xmin)).toInt()
         with(f.functions) {
             anonymousFunctions +=
                 {
+                    val x =
+                        ((it.toDouble() - f.functions.xmin) * f.functions.width / (f.functions.xmax - f.functions.xmin)).toInt()
                     pixels.graphics.also { it.color = Color.BLACK }.drawLine(x, 0, x, height - 1)
-                    f.canvas.repaint()
-                }.also { it.invoke() }
+                }
+            f.canvas.repaint()
         }
     }
     commands["withColor"] = { TODO() }
@@ -194,7 +195,7 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
 
 fun main() {
     //TODO: make axes appear in right place for an even number of pixels
-    val f = Frontend(601, 601)
+    val f = Frontend()
     val commands = HashMap<String, (String) -> Unit>()
     val s = State(commands)
     bindCommands(f, commands, s)
