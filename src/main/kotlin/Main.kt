@@ -5,14 +5,17 @@ import kotlin.system.exitProcess
 fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: State) {
     commands["exit"] = { exitProcess(0) }
     commands["quit"] = { exitProcess(0) }
-    commands["draw"] = {
+    commands["draw"] = { it ->
         val trimmed = it.trim()
         if (trimmed in s.functions) {
             val func = s.functions[trimmed]!!
-            f.functions.addToDraw(trimmed) { n -> func(arrayOf(n), s) }
+            f.functions.addToDraw(trimmed) { x, y -> func(arrayOf(x), s) - y }
         } else {
             val state = s.cloneVars()
-            f.functions.draw { n -> parseExpr(trimmed, IntHolder(0)).evaluate(state.also { state.setVar("x", n) }) }
+            //This is declared outside so as not to parse the input every time
+            val expr = parseExpr(trimmed, IntHolder(0))
+            //TODO: caching of function results
+            f.functions.addToDraw { x, y -> expr.evaluate(state.also { state.setVar("x", x) }) - y }
         }
         f.canvas.repaint()
     }
@@ -24,8 +27,9 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
             f.functions.addToDraw(trimmed) { x, y -> func(arrayOf(x, y), s) }
         } else {
             val state = s.cloneVars()
+            val expr = parseExpr(trimmed, IntHolder(0))
             f.functions.draw { x, y ->
-                parseExpr(trimmed, IntHolder(0)).evaluate(state.also {
+                expr.evaluate(state.also {
                     state.setVar(
                         "x",
                         x
@@ -36,14 +40,13 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
         f.canvas.repaint()
     }
     commands["redraw"] = {
-        f.functions.redraw()
         f.canvas.repaint()
     }
     commands["clear"] = {
-        f.functions.toDraw.clear()
-        f.functions.redraw()
+        f.functions.clear()
         f.canvas.repaint()
     }
+    //TODO: remove all anonymous functions
     commands["undraw"] =
         {
             f.functions.removeFromDraw(it.trim())
@@ -51,42 +54,35 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
         }
     commands["xmin"] = {
         f.functions.xmin = it.toDouble()
-        f.functions.redraw()
         f.canvas.repaint()
     }
     commands["xmax"] = {
         f.functions.xmax = it.toDouble()
-        f.functions.redraw()
         f.canvas.repaint()
     }
     commands["ymin"] = {
         f.functions.ymin = it.toDouble()
-        f.functions.redraw()
         f.canvas.repaint()
     }
     commands["ymax"] = {
         f.functions.ymax = it.toDouble()
-        f.functions.redraw()
         f.canvas.repaint()
     }
     commands["axis"] = {
-        with(f)
-        {
-            functions.axis = !functions.axis
-            if (functions.axis)
-                functions.drawAxis()
-            else
-                functions.redraw()
-            canvas.repaint()
-        }
+        f.functions.axis = !f.functions.axis
+        f.canvas.repaint()
     }
     commands["vline"] = {
         val x = ((it.toDouble() - f.functions.xmin) * f.functions.width / (f.functions.xmax - f.functions.xmin)).toInt()
-        with(f) {
-            functions.pixels.graphics.also { it.color = Color.BLACK }.drawLine(x, 0, x, functions.height - 1)
-            canvas.repaint()
+        with(f.functions) {
+            anonymousFunctions +=
+                {
+                    pixels.graphics.also { it.color = Color.BLACK }.drawLine(x, 0, x, height - 1)
+                    f.canvas.repaint()
+                }.also { it.invoke() }
         }
     }
+    commands["withColor"] = { TODO() }
     commands["solve"] = {
         with(f.functions)
         {
@@ -139,7 +135,6 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
     }
     commands["thickness"] = {
         f.functions.thickness = parseExpr(it, IntHolder(0)).evaluate(s).roundToInt()
-        f.functions.redraw()
         f.canvas.repaint()
     }
     commands["help"] = {
@@ -179,7 +174,7 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
                 \clear clears the drawing area
                 \axis toggle the axis. This redraws everything
                 \redraw redraws all functions
-                \undraw stop drawing a function, this too redraws everything
+                \undraw stop drawing a function, this too redraws everything, if empty the last element of the anonymous functions is removed
                 These set viewport size
                 \xmax
                 \xmin

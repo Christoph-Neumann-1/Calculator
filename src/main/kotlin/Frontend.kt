@@ -24,6 +24,7 @@ class Frontend(width: Int, height: Int) {
 
         override fun paint(g: Graphics?) {
             g ?: return
+            functions.redraw()
             g.drawImage(functions.pixels, 0, 0, null)
         }
     }
@@ -54,8 +55,10 @@ class Frontend(width: Int, height: Int) {
 
     class FunctionDrawer(val width: Int, val height: Int) {
         //bool should also work as return type
-        var toDraw = HashMap<String, (Double) -> Double>()
-        var relationsToDraw = HashMap<String, (Double, Double) -> Double>()
+        var toDraw = HashMap<String, (Double, Double) -> Double>()
+
+        //This is kept as generic as possible to allow other commands like vline to be used from here
+        var anonymousFunctions = ArrayDeque<() -> Unit>()
         private val corners = Array<Double>((width + 1) * (height + 1)) { 0.0 }
         var pixels = BufferedImage(width, height, BufferedImage.TYPE_USHORT_555_RGB)
         var xmin = -10.0
@@ -69,11 +72,11 @@ class Frontend(width: Int, height: Int) {
         fun scaleY(y: Double) = ymin + (ymax - ymin) / height * y
 
         fun redraw() {
-            clear()
+            pixels.createGraphics().fillRect(0, 0, width, height)
             for (f in toDraw)
                 draw(f.value)
-            for (f in relationsToDraw)
-                draw(f.value)
+            for (f in anonymousFunctions)
+                f()
             if (axis)
                 drawAxis()
         }
@@ -93,69 +96,45 @@ class Frontend(width: Int, height: Int) {
                 g.drawLine(0, y, width - 1, y)
         }
 
-        fun addToDraw(name: String, f: (Double) -> Double) {
+        fun addToDraw(name: String = "", f: (Double, Double) -> Double) {
+            if (name.isEmpty()) {
+                anonymousFunctions += { draw(f) }
+                draw(f)
+                return
+            }
             if (name in toDraw) {
                 toDraw[name] = f
-                redraw()
                 return
             }
             toDraw[name] = f
             draw(f)
         }
 
-        fun addToDraw(name: String, f: (Double, Double) -> Double) {
-            if (name in toDraw) {
-                relationsToDraw[name] = f
-                redraw()
-                return
-            }
-            relationsToDraw[name] = f
-            draw(f)
-        }
-
         fun removeFromDraw(name: String) {
-            toDraw.remove(name) ?: relationsToDraw.remove(name) ?: ParserException("Tried removing undefined function")
-            redraw()
+            toDraw.remove(name)
+                ?: if (name.isEmpty()) anonymousFunctions.removeLastOrNull() else throw ParserException("Tried removing undefined function")
         }
 
-        fun get(x: Int, y: Int) = corners[x * (width + 1) + y]
 
-        private fun draw() {
+        fun draw(f: (Double, Double) -> Double) {
+            fun get(x: Int, y: Int) = corners[x * (width + 1) + y]
+            for (x in 0..width)
+                for (y in 0..height)
+                    corners[x * (width + 1) + y] = f(scaleX(x - .5), scaleY(y - .5))
             val g = pixels.createGraphics()
             g.color = Color.BLACK
             for (x in 0 until width)
                 for (y in 0 until height)
                     if (get(x, y) * get(x + 1, y + 1) + get(x, y + 1) * get(x + 1, y) <= 0)
-                        g.fillRect(x-thickness, height - y-thickness - 1, 2*thickness+1, 2*thickness+1)
-        }
-
-        fun draw(f: (Double) -> Double) {
-            for (x in 0..width) {
-                val fx = f(scaleX(x - .5))
-                corners[x * (width + 1)] = fx
-                for (y in 0..height)
-                    corners[x * (width + 1) + y] = fx - scaleY(y - .5)
-            }
-            draw()
-        }
-
-        //TODO: turn into just one function
-        fun draw(f: (Double, Double) -> Double) {
-            for (x in 0..width)
-                for (y in 0..height)
-                    corners[x * (width + 1) + y] = f(scaleX(x - .5), scaleY(y - .5))
-            draw()
+                        g.fillRect(x - thickness, height - y - thickness - 1, 2 * thickness + 1, 2 * thickness + 1)
         }
 
         fun clear() {
-            pixels.createGraphics().fillRect(0, 0, width, height)
+            toDraw.clear()
+            anonymousFunctions.clear()
         }
 
 //        fun removeFromDraw(name:String){}
-
-        init {
-            redraw()
-        }
 
     }
 }
