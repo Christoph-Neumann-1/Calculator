@@ -2,11 +2,11 @@
 <module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
   <component name="FacetManager">
     <facet type="kotlin-language" name="Kotlin">
-      <configuration version="5" platform="JVM 16" allPlatforms="JVM [16]" useProjectSettings="false">
+      <configuration version="5" platform="JVM 15" allPlatforms="JVM [15]" useProjectSettings="false">
         <compilerSettings />
         <compilerArguments>
           <stringArguments>
-            <stringArg name="jvmTarget" arg="16" />
+            <stringArg name="jvmTarget" arg="15" />
             <stringArg name="apiVersion" arg="1.5" />
             <stringArg name="languageVersion" arg="1.5" />
           </stringArguments>
