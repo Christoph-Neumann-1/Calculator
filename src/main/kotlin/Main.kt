@@ -20,7 +20,7 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
         f.canvas.repaint()
     }
     //I have not even the slightest clue if this is the correct term
-    commands["drawRelation"] = {
+    commands["drawAdvanced"] = {
         val trimmed = it.trim()
         if (trimmed in s.functions) {
             val func = s.functions[trimmed]!!
@@ -171,7 +171,7 @@ fun bindCommands(f: Frontend, commands: HashMap<String, (String) -> Unit>, s: St
                 \exit
                 \quit
                 \draw draws either a function accepting one argument or an expression where x is the current x position. Only functions will stay after a redraw
-                \drawRelation draws a function of both x and y like circles e.g x^2+y^2-1
+                \drawAdvanced draws a function of both x and y like circles e.g x^2+y^2-1
                 \clear clears the drawing area
                 \axis toggle the axis. This redraws everything
                 \redraw redraws all functions
